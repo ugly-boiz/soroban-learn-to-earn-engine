@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - INPUT_DIM=100000
+      - CONS_SOROBAN_RPC=https://soroban-testnet.stellar.org
+    volumes:
+      - ./:/app

@@ -1,0 +1,40 @@
+name: Deploy Soroban Contract
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - name: Add wasm target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build contract
+        working-directory: ./contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+      - name: Install soroban CLI (best-effort)
+        run: |
+          set -e
+          cargo install --locked soroban-cli || echo "soroban install failed; continuing"
+      - name: Deploy (manual secret required)
+        env:
+          CONS_SOROBAN_RPC: ${{ secrets.CONS_SOROBAN_RPC }}
+          CONS_SOROBAN_SECRET: ${{ secrets.CONS_SOROBAN_SECRET }}
+          CONS_CONTRACT_WASM: ./contracts/target/wasm32-unknown-unknown/release/consparse_contract.wasm
+        run: |
+          if [ -z "${CONS_SOROBAN_SECRET}" ]; then
+            echo "No CONS_SOROBAN_SECRET provided; skipping deploy. Set the secret to enable deploy."
+            exit 0
+          fi
+          if command -v soroban >/dev/null 2>&1; then
+            echo "Deploying contract to ${CONS_SOROBAN_RPC:-https://soroban-testnet.stellar.org}"
+            soroban contract deploy --wasm $CONS_CONTRACT_WASM --network ${CONS_SOROBAN_RPC:-https://soroban-testnet.stellar.org}
+          else
+            echo "soroban CLI not available in runner; built artifact at $CONS_CONTRACT_WASM. Download and deploy locally."
+          fi

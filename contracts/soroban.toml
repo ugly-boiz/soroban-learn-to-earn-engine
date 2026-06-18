@@ -1,0 +1,9 @@
+[project]
+name = "consparse_contract"
+wasm = "target/wasm32-unknown-unknown/release/consparse_contract.wasm"
+
+[network]
+default = "testnet"
+
+[network.testnet]
+rpc_url = "https://soroban-testnet.stellar.org"
