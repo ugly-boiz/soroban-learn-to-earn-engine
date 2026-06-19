@@ -74,6 +74,13 @@ async def health():
 
 @app.post("/predict")
 async def predict(req: PredictRequest):
+    # If the model wasn't loaded (dev / SKIP_MODEL_LOAD), return a lightweight
+    # synthetic prediction so tests and smoke checks can run without heavy deps.
+    if MODEL is None:
+        # return a simple zeroed prediction for each requested batch entry
+        preds = {"task_a": [[0.0] for _ in range(req.batch_size)]}
+        return {"predictions": preds}
+
     # For the scaffold, generate synthetic data and run the model.
     ds = SyntheticSparseDataset(input_dim=MODEL.encoder.net[0].weight.shape[1] if hasattr(MODEL.encoder.net[0], 'weight') else 1024, size=req.batch_size, nnz_per_row=16)
     xb, yb = collate_sparse([ds[i] for i in range(req.batch_size)])
