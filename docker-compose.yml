@@ -7,5 +7,7 @@ services:
     environment:
       - INPUT_DIM=100000
       - CONS_SOROBAN_RPC=https://soroban-testnet.stellar.org
+      - CONS_CONTRACT_ID=REPLACE_WITH_CONTRACT_ID
+      - CONS_SIGNER_SECRET=
     volumes:
       - ./:/app
