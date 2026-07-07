@@ -40,13 +40,21 @@ def _invoke_cli(value: str, contract_id: str | None = None, signer_secret: str |
     # Use zero key as a simple demo storage key (BytesN<32>)
     # Network name "testnet" is resolved from the stellar CLI v27 config
     cmd = [
-        "soroban", "contract", "invoke",
-        "--id", c,
-        "--source-account", secret,
-        "--network", "testnet",
-        "--", "store_result",
-        "--key", "0000000000000000000000000000000000000000000000000000000000000000",
-        "--value", str(int(value)),
+        "soroban",
+        "contract",
+        "invoke",
+        "--id",
+        c,
+        "--source-account",
+        secret,
+        "--network",
+        "testnet",
+        "--",
+        "store_result",
+        "--key",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "--value",
+        str(int(value)),
     ]
     try:
         res = subprocess.run(cmd, capture_output=True, text=True, check=True)
