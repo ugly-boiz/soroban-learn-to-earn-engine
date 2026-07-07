@@ -1,3 +1,57 @@
 [build-system]
 requires = ["setuptools>=60"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "consparse"
+version = "0.1.0"
+description = "Consortium Sparse Engine — sparse-aware multi-task deep learning with Soroban blockchain integration"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Consortium Sparse Engine contributors"}
+]
+keywords = ["deep-learning", "sparse", "pytorch", "soroban", "stellar", "blockchain"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # function calls in defaults — common in ML config patterns
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/soroban_client_sdk.py" = ["N806"]  # dynamic SDK class-name lookups
+
+[tool.ruff.lint.isort]
+known-first-party = ["consparse", "backend"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+

@@ -3,7 +3,6 @@
 This provides a Dataset that yields sparse fingerprints or feature matrices as
 `torch.sparse_coo_tensor` along with per-task targets.
 """
-from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -23,32 +22,31 @@ class SyntheticSparseDataset(Dataset):
         input_dim: int = 100_000,
         size: int = 1024,
         nnz_per_row: int = 32,
-        task_dims: Dict[str, int] = None,
+        task_dims: dict[str, int] = None,
         seed: int = 42,
     ):
         self.input_dim = input_dim
         self.size = size
         self.nnz_per_row = nnz_per_row
         self.task_dims = task_dims or {"task_a": 1}
-        rng = np.random.RandomState(seed)
+        self.rng = np.random.RandomState(seed)
         self.rows = []
         self.values = []
         self.cols = []
         for i in range(size):
-            cols = rng.choice(input_dim, size=nnz_per_row, replace=False)
-            vals = rng.randn(nnz_per_row).astype(np.float32)
+            cols = self.rng.choice(input_dim, size=nnz_per_row, replace=False)
+            vals = self.rng.randn(nnz_per_row).astype(np.float32)
             rows = np.full_like(cols, i, dtype=np.int64)
             self.rows.append(rows)
             self.cols.append(cols)
             self.values.append(vals)
         # create a random linear projection used to generate targets
-        self.proj = rng.randn(input_dim, sum(self.task_dims.values())).astype(np.float32)
+        self.proj = self.rng.randn(input_dim, sum(self.task_dims.values())).astype(np.float32)
 
     def __len__(self):
         return self.size
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        rows = self.rows[idx]
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         cols = self.cols[idx]
         vals = self.values[idx]
         indices = np.stack([np.zeros_like(cols), cols], axis=0).astype(np.int64)
@@ -59,7 +57,7 @@ class SyntheticSparseDataset(Dataset):
         # dense projection for targets
         dense = np.zeros((self.input_dim,), dtype=np.float32)
         dense[cols] = vals
-        y = dense @ self.proj + 0.1 * rng.randn(sum(self.task_dims.values())).astype(np.float32)
+        y = dense @ self.proj + 0.1 * self.rng.randn(sum(self.task_dims.values())).astype(np.float32)
         # split into task dict
         out = {}
         offset = 0
@@ -71,12 +69,12 @@ class SyntheticSparseDataset(Dataset):
 
 # Small collate fn to stack sparse rows into a batch sparse tensor
 
+
 def collate_sparse(batch):
-    xs, ys = zip(*batch)
+    xs, ys = zip(*batch, strict=False)
     # xs: list of 1 x input_dim sparse tensors
     indices = []
     values = []
-    cols = None
     for i, x in enumerate(xs):
         x = x.coalesce()
         idx = x.indices()  # 2 x nnz
@@ -92,6 +90,6 @@ def collate_sparse(batch):
     xb = torch.sparse_coo_tensor(indices, values, size=(len(xs), input_dim)).coalesce()
     # stack ys
     yb = {}
-    for k in ys[0].keys():
-        yb[k] = torch.stack([y[k].squeeze(0) if y[k].dim()>0 else y[k] for y in ys])
+    for k in ys[0]:
+        yb[k] = torch.stack([y[k].squeeze(0) if y[k].dim() > 0 else y[k] for y in ys])
     return xb, yb

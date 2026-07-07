@@ -1,6 +1,7 @@
-fastapi
-uvicorn[standard]
-python-dotenv
-pydantic
-numpy
-stellar-sdk
+fastapi>=0.100
+uvicorn[standard]>=0.23
+python-dotenv>=1.0
+pydantic>=2.0
+numpy>=1.24
+stellar-sdk>=9.0
+requests>=2.28

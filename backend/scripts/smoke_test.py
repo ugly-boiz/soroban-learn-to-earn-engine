@@ -6,11 +6,12 @@ Usage:
 This script attempts to call /status and (optionally) /record_on_chain if a
 contract id is configured.
 """
+
+import json
 import os
 import sys
-import json
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8000")
 

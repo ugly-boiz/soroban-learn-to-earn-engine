@@ -1,24 +1,20 @@
 #![no_std]
 
-use soroban_sdk::{contractimpl, Env, BytesN};
+use soroban_sdk::{contract, contractimpl, Env, BytesN};
 
+#[contract]
 pub struct ConsparseContract;
 
 #[contractimpl]
 impl ConsparseContract {
     pub fn store_result(env: Env, key: BytesN<32>, value: i128) {
-        env.storage().set(&key, &value);
+        env.storage().instance().set(&key, &value);
     }
 
     pub fn get_result(env: Env, key: BytesN<32>) -> i128 {
-        env.storage().get(&key).unwrap_or(0_i128)
+        env.storage().instance().get(&key).unwrap_or(0_i128)
     }
 }
-
-mod test {
-    // Unit tests for Soroban contracts run with `cargo test` using soroban-sdk test helpers.
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -28,9 +24,12 @@ mod tests {
     #[test]
     fn test_store_get() {
         let env = Env::default();
+        let contract_id = env.register(ConsparseContract, ());
+        let client = ConsparseContractClient::new(&env, &contract_id);
+
         let key = BytesN::from_array(&env, &[0u8; 32]);
-        ConsparseContract::store_result(env.clone(), key.clone(), 42_i128);
-        let r = ConsparseContract::get_result(env.clone(), key);
+        client.store_result(&key, &42_i128);
+        let r = client.get_result(&key);
         assert_eq!(r, 42_i128);
     }
 }

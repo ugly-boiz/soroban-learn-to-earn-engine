@@ -3,7 +3,6 @@
 This file provides a minimal, extensible model scaffold with a sparse input encoder
 and multi-task heads.
 """
-from typing import Dict
 
 import torch
 import torch.nn as nn
@@ -25,10 +24,7 @@ class SparseLinear(nn.Module):
             self.register_parameter("bias", None)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if x.is_sparse:
-            out = torch.sparse.mm(x, self.weight.t())
-        else:
-            out = x @ self.weight.t()
+        out = torch.sparse.mm(x, self.weight.t()) if x.is_sparse else x @ self.weight.t()
         if self.bias is not None:
             out = out + self.bias
         return out
@@ -65,11 +61,11 @@ class MultiTaskHead(nn.Module):
     sophisticated components (calibration layers, uncertainty heads, etc.).
     """
 
-    def __init__(self, in_dim: int, task_dims: Dict[str, int]):
+    def __init__(self, in_dim: int, task_dims: dict[str, int]):
         super().__init__()
         self.heads = nn.ModuleDict({k: nn.Linear(in_dim, v) for k, v in task_dims.items()})
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         return {k: head(x) for k, head in self.heads.items()}
 
 
@@ -81,11 +77,11 @@ class ConsSparseModel(nn.Module):
         task_dims: mapping from task name to output dim (1 for regression/binary).
     """
 
-    def __init__(self, input_dim: int, task_dims: Dict[str, int]):
+    def __init__(self, input_dim: int, task_dims: dict[str, int]):
         super().__init__()
         self.encoder = SparseEncoder(input_dim)
         self.heads = MultiTaskHead(self.encoder.out_dim, task_dims)
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         emb = self.encoder(x)
         return self.heads(emb)

@@ -1,6 +1,5 @@
-import torch
-from consparse.models import ConsSparseModel
 from consparse.data import SyntheticSparseDataset, collate_sparse
+from consparse.models import ConsSparseModel
 
 
 def test_forward():

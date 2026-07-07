@@ -3,10 +3,11 @@
 Usage:
   CONS_SOROBAN_RPC=https://soroban-testnet.stellar.org python backend/scripts/check_rpc.py
 """
+
 import os
 import sys
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
 RPC = os.environ.get("CONS_SOROBAN_RPC", "https://soroban-testnet.stellar.org")
 

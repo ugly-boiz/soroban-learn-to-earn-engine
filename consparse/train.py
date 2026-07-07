@@ -2,14 +2,15 @@
 
 Provides a minimal train loop for smoke testing.
 """
+
 import argparse
-import yaml
 
 import torch
+import yaml
 from torch.utils.data import DataLoader
 
-from .models import ConsSparseModel
 from .data import SyntheticSparseDataset, collate_sparse
+from .models import ConsSparseModel
 
 
 def train(config):
@@ -29,7 +30,7 @@ def train(config):
             xb = xb.to(device)
             out = model(xb)
             loss = 0.0
-            for k in yb.keys():
+            for k in yb:
                 pred = out[k]
                 target = yb[k].to(device).float()
                 loss = loss + ((pred.squeeze(-1) - target.squeeze(-1)) ** 2).mean()
@@ -43,7 +44,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/dev.yaml")
     args = parser.parse_args()
-    with open(args.config, "r") as f:
+    with open(args.config) as f:
         cfg = yaml.safe_load(f)
     train(cfg)
 

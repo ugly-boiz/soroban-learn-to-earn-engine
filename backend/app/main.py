@@ -1,16 +1,24 @@
+import os
+from contextlib import asynccontextmanager
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-import os
 
-from consparse.data import SyntheticSparseDataset, collate_sparse
-from consparse.models import ConsSparseModel
-from ..soroban_client import record_result, CONTRACT_ID, RPC
-from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
+from ..soroban_client import CONTRACT_ID, RPC, record_result
 
-app = FastAPI(title="ConsSparse Backend")
+MODEL = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _load_model()
+    yield
+
+
+app = FastAPI(title="ConsSparse Backend", lifespan=lifespan)
 
 # Allow dev frontend origins (Vite/CRA). Extend as needed for production.
 origins = [
@@ -25,11 +33,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL = None
-
 
 class PredictRequest(BaseModel):
-    batch_size: Optional[int] = 8
+    batch_size: int | None = 8
 
 
 class RecordRequest(BaseModel):
@@ -38,18 +44,20 @@ class RecordRequest(BaseModel):
 
 class SetContractRequest(BaseModel):
     contract_id: str
-    admin_token: Optional[str] = None
+    admin_token: str | None = None
 
 
-@app.on_event("startup")
-def load_model():
+def _load_model():
+    """Load a lightweight model for inference. In production, load a trained checkpoint."""
     global MODEL
     # Optionally skip model loading for quick dev checks or smoke tests.
     if os.environ.get("SKIP_MODEL_LOAD", "").lower() in ("1", "true", "yes"):
         MODEL = None
         return
 
-    # Load a lightweight model for inference. In production, load a trained checkpoint.
+    # Defer torch imports to avoid requiring heavy ML deps for basic API usage.
+    from consparse.models import ConsSparseModel
+
     input_dim = int(os.environ.get("INPUT_DIM", "100000"))
     MODEL = ConsSparseModel(input_dim, {"task_a": 1})
 
@@ -81,11 +89,18 @@ async def predict(req: PredictRequest):
         preds = {"task_a": [[0.0] for _ in range(req.batch_size)]}
         return {"predictions": preds}
 
+    # Defer consparse imports to avoid requiring heavy ML deps for basic API usage.
+    from consparse.data import SyntheticSparseDataset, collate_sparse
+
     # For the scaffold, generate synthetic data and run the model.
-    ds = SyntheticSparseDataset(input_dim=MODEL.encoder.net[0].weight.shape[1] if hasattr(MODEL.encoder.net[0], 'weight') else 1024, size=req.batch_size, nnz_per_row=16)
+    ds = SyntheticSparseDataset(
+        input_dim=MODEL.encoder.net[0].weight.shape[1] if hasattr(MODEL.encoder.net[0], "weight") else 1024,
+        size=req.batch_size,
+        nnz_per_row=16,
+    )
     xb, yb = collate_sparse([ds[i] for i in range(req.batch_size)])
     MODEL.eval()
-    with __import__('torch').no_grad():
+    with __import__("torch").no_grad():
         out = MODEL(xb)
     # convert tensors to python lists
     result = {k: v.detach().cpu().tolist() for k, v in out.items()}
@@ -111,7 +126,9 @@ async def record_on_chain(req: RecordRequest):
             import subprocess
 
             env = os.environ.copy()
-            proc = subprocess.run(["python", script_path, str(value)], capture_output=True, text=True, env=env, check=True)
+            proc = subprocess.run(
+                ["python", script_path, str(value)], capture_output=True, text=True, env=env, check=True
+            )
             return {"status": "submitted", "output": proc.stdout}
         except Exception as e:
             return {"status": "error", "detail": str(e)}

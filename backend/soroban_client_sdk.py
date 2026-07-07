@@ -7,19 +7,21 @@ returns informative diagnostics when a required feature is missing.
 If a compatible SDK is not available, the caller should fall back to the
 `soroban` CLI (already implemented elsewhere in the repo).
 """
+
 import importlib
 import os
-from typing import Optional, Dict
 
 
 def _int_or_fail(v: str) -> int:
     try:
         return int(float(v))
     except Exception:
-        raise ValueError("value must be numeric")
+        raise ValueError("value must be numeric") from None
 
 
-def record_result_sdk(value: str, signer_secret: Optional[str] = None, contract_id: Optional[str] = None, rpc_url: Optional[str] = None) -> Dict:
+def record_result_sdk(
+    value: str, signer_secret: str | None = None, contract_id: str | None = None, rpc_url: str | None = None
+) -> dict:
     """Try to invoke `store_result` on the deployed contract using SDK.
 
     Returns a dict with keys `status` and additional diagnostics. On
@@ -113,13 +115,17 @@ def record_result_sdk(value: str, signer_secret: Optional[str] = None, contract_
     # Branch B: try to use stellar_sdk core + InvokeHostFunction op (older shapes)
     try:
         # dynamic imports to avoid hard dependency at module import time
-        Keypair = getattr(stellar_sdk, "Keypair", None) or getattr(importlib.import_module("stellar_sdk.keypair"), "Keypair", None)
+        Keypair = getattr(stellar_sdk, "Keypair", None) or getattr(
+            importlib.import_module("stellar_sdk.keypair"), "Keypair", None
+        )
         TransactionBuilder = getattr(stellar_sdk, "TransactionBuilder", None)
         Network = getattr(stellar_sdk, "Network", None)
         Server = getattr(stellar_sdk, "Server", None)
 
         # check for operation class in soroban_mod or stellar_sdk
-        InvokeHostFunction = getattr(soroban_mod, "InvokeHostFunction", None) or getattr(stellar_sdk, "InvokeHostFunction", None)
+        InvokeHostFunction = getattr(soroban_mod, "InvokeHostFunction", None) or getattr(
+            stellar_sdk, "InvokeHostFunction", None
+        )
 
         if Keypair and TransactionBuilder and Network and Server and InvokeHostFunction:
             server = Server(rpc)
@@ -138,7 +144,9 @@ def record_result_sdk(value: str, signer_secret: Optional[str] = None, contract_
             if ScVal and ScVec:
                 try:
                     key_arg = ScVal.from_bytes(key_bytes) if hasattr(ScVal, "from_bytes") else ScVal.bytes(key_bytes)
-                    val_arg = ScVal.from_i128(numeric_value) if hasattr(ScVal, "from_i128") else ScVal.i128(numeric_value)
+                    val_arg = (
+                        ScVal.from_i128(numeric_value) if hasattr(ScVal, "from_i128") else ScVal.i128(numeric_value)
+                    )
                     args = ScVec([key_arg, val_arg])
                 except Exception:
                     args = None
@@ -148,7 +156,15 @@ def record_result_sdk(value: str, signer_secret: Optional[str] = None, contract_
             op = InvokeHostFunction(contract, "store_result", args)
 
             # Build transaction (best-effort). If source_acct is None try a minimal build.
-            txb = TransactionBuilder(source_account=source_acct or object(), network_passphrase=(Network.TESTNET_NETWORK_PASSPHRASE if hasattr(Network, 'TESTNET_NETWORK_PASSPHRASE') else Network.PUBLIC_NETWORK_PASSPHRASE), base_fee=100)
+            txb = TransactionBuilder(
+                source_account=source_acct or object(),
+                network_passphrase=(
+                    Network.TESTNET_NETWORK_PASSPHRASE
+                    if hasattr(Network, "TESTNET_NETWORK_PASSPHRASE")
+                    else Network.PUBLIC_NETWORK_PASSPHRASE
+                ),
+                base_fee=100,
+            )
             txb.append_operation(op)
             tx = txb.build()
             tx.sign(kp)

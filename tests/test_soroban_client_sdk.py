@@ -1,5 +1,5 @@
-from backend.soroban_client import record_result
 import backend.soroban_client_sdk as sdk
+from backend.soroban_client import record_result
 
 
 def test_record_result_uses_sdk(monkeypatch):
@@ -19,7 +19,11 @@ def test_record_result_falls_back_to_cli(monkeypatch):
     import backend.soroban_client as sc
 
     monkeypatch.setattr(sc, "_try_sdk_record", lambda *a, **k: None)
-    monkeypatch.setattr(sc, "_invoke_cli", lambda value, contract_id=None, rpc_url=None: {"status": "fallback", "detail": "soroban_cli_not_available"})
+    monkeypatch.setattr(
+        sc,
+        "_invoke_cli",
+        lambda value, contract_id=None, rpc_url=None: {"status": "fallback", "detail": "soroban_cli_not_available"},
+    )
     res = record_result("456")
     assert isinstance(res, dict)
     assert res.get("status") in ("fallback", "error")

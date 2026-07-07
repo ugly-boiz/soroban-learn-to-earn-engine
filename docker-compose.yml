@@ -1,13 +1,32 @@
-version: '3.8'
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     env_file:
-      - ./.env
+      - path: .env
+        required: false
     environment:
       - INPUT_DIM=100000
+      - SKIP_MODEL_LOAD=0
       - CONS_SOROBAN_RPC=https://soroban-testnet.stellar.org
-    volumes:
-      - ./:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_URL=http://backend:8000

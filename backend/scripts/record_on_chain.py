@@ -4,6 +4,7 @@ This script is a scaffolding helper. For deployment and secure signing you shoul
 use `soroban` CLI or the official SDK with a securely stored key. Replace the
 `CONTRACT_ID` with your deployed contract ID and update invocation accordingly.
 """
+
 import os
 import subprocess
 import sys

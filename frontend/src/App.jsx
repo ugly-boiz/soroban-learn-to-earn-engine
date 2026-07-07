@@ -1,19 +1,21 @@
 import React, {useState} from 'react'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function App(){
   const [pred, setPred] = useState(null)
   const [recordValue, setRecordValue] = useState(42)
   const [chainRes, setChainRes] = useState(null)
 
   const callPredict = async () => {
-    const res = await fetch('http://localhost:8000/predict', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({batch_size:4})})
+    const res = await fetch(`${API_BASE}/predict`, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({batch_size:4})})
     const j = await res.json()
     setPred(j.predictions)
   }
 
   const recordOnChain = async () => {
     try {
-      const res = await fetch('http://localhost:8000/record_on_chain', {
+      const res = await fetch(`${API_BASE}/record_on_chain`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ value: Number(recordValue) })
