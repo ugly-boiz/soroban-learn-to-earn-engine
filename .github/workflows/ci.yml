@@ -35,7 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest httpx2
       - name: Run tests
         env:
           SKIP_MODEL_LOAD: 1
